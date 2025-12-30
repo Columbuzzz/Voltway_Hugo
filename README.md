@@ -56,8 +56,19 @@ Create `google_credentials.json` in root folder:
 ```
 
 ### 5. Initialize Database
+
 ```bash
+# Create the SQLite database with all tables
 python -c "from src.setup_db import create_sql_db; create_sql_db()"
+
+# (Optional) Extract BOMs from scanned PDFs
+python -m src.ingest_specs
+
+# (Optional) Align data for test scenarios
+cd data && python augment_data.py && cd ..
+
+# (Optional) Build schema index for RAG
+python -c "from src.rag_schema import build_schema_index; build_schema_index()"
 ```
 
 ### 6. Run the Dashboard
@@ -83,10 +94,14 @@ Voltway_Hugo/
 │   ├── stock_tools.py         # Inventory tools
 │   ├── email_tools.py         # Email awareness
 │   ├── issue_tools.py         # Issue tracking
-│   └── gmail_monitor.py       # Gmail OAuth2
+│   ├── gmail_monitor.py       # Gmail OAuth2
+│   ├── rag_schema.py          # Schema embeddings (for scaling)
+│   ├── ingest_specs.py        # OCR-based BOM extraction
+│   └── setup_db.py            # Database initialization
 │
 ├── data/
 │   ├── emails/                # .eml files
+│   ├── specs/                 # Scanned PDF manuals
 │   ├── stock_levels.csv       # Inventory
 │   ├── material_orders.csv    # Purchase orders
 │   └── suppliers.csv          # Supplier database
@@ -97,14 +112,66 @@ Voltway_Hugo/
 
 ---
 
+## 🛠️ Agent Tools & Capabilities
+
+Hugo has access to **17 specialized tools**:
+
+### 📦 Stock & Inventory
+| Tool | Description |
+|------|-------------|
+| `get_stock_status(part_id)` | Get stock levels for a specific part |
+| `get_low_stock_alerts(threshold)` | Find parts below threshold |
+| `get_stock_summary()` | Executive inventory overview |
+| `get_stock_by_model(model)` | Stock for all BOM components |
+| `check_part_usage(part_id)` | Which BOMs use this part + demand |
+
+### 📧 Email Awareness
+| Tool | Description |
+|------|-------------|
+| `get_email_history(limit)` | Recent processed emails |
+| `search_emails(keyword, intent)` | Search by keyword or intent |
+| `get_email_summary(filename)` | Full email details |
+| `get_emails_by_risk(min_risk)` | High-risk email filter |
+
+### 🎫 Issue Tracking
+| Tool | Description |
+|------|-------------|
+| `get_open_issues()` | All active issues |
+| `get_issue_details(issue_id)` | Full issue info |
+| `resolve_issue(id, notes)` | Close an issue |
+| `create_issue(title, desc, severity)` | Manual issue creation |
+| `get_issue_summary()` | Dashboard statistics |
+
+### 🔧 Operations
+| Tool | Description |
+|------|-------------|
+| `check_fulfillment(date, model, qty)` | Build feasibility check |
+| `calculate_lean_safety_stock(lead, demand)` | Statistical safety stock |
+
+---
+
 ## 💬 Chat Examples
 
-Ask Hugo:
+### Stock Queries
 - *"Which stocks are running low?"*
-- *"Show me open issues"*
+- *"What's the stock status for P302?"*
+- *"Give me a stock summary"*
+- *"How is P305 used across our products?"*
+
+### Build Feasibility
 - *"Can we build 100 S2_V2 scooters by May 2025?"*
+- *"Is it feasible to produce 50 S1_V1 by April 15?"*
+
+### Email & Suppliers
+- *"Show me recent supplier emails"*
+- *"Find emails about delays"*
+- *"Show high-risk emails"*
 - *"Which suppliers provide P302?"*
-- *"How will the delay on O5007 impact us?"*
+
+### Issue Management
+- *"What open issues need attention?"*
+- *"Show me issue ISS-20251229-001"*
+- *"Give me an issue summary"*
 
 ---
 

@@ -8,67 +8,77 @@
 
 ## 🏗️ System Architecture
 
-```mermaid
-flowchart TB
-    subgraph Input["📥 Input Sources"]
-        Gmail["📬 Gmail API"]
-        EML["📁 Local .eml Files"]
-    end
-
-    subgraph Processing["🤖 AI Processing Layer"]
-        Watchdog["🐕 Watchdog Agent<br/>Intent Classification<br/>Risk Scoring (1-5)"]
-        SQLAgent["🔧 SQL Agent<br/>17 Custom Tools<br/>Database Access"]
-    end
-
-    subgraph Storage["💾 Data Layer"]
-        SQLite["🗃️ SQLite Database"]
-        ChromaDB["🔍 ChromaDB<br/>Schema Embeddings"]
-    end
-
-    subgraph UI["🖥️ Streamlit Dashboard"]
-        Issues["🎫 Issues Panel"]
-        Emails["📧 Email Feed"]
-        Stock["📦 Stock Alerts"]
-        Chat["💬 Hugo Chat"]
-    end
-
-    Gmail --> Watchdog
-    EML --> Watchdog
-    Watchdog --> SQLite
-    Watchdog -->|"risk ≥ 4"| Issues
-    SQLAgent --> SQLite
-    SQLAgent --> ChromaDB
-    Chat --> SQLAgent
-    SQLite --> UI
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                           HUGO AI SYSTEM                                     │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                              │
+│   📥 INPUT SOURCES              🤖 AI PROCESSING              💾 STORAGE    │
+│  ┌─────────────────┐          ┌─────────────────┐         ┌──────────────┐  │
+│  │  📬 Gmail API   │─────────▶│   🐕 Watchdog   │────────▶│   SQLite     │  │
+│  │  📁 .eml Files  │          │  Risk Scoring   │         │   Database   │  │
+│  └─────────────────┘          └─────────────────┘         └──────────────┘  │
+│                                       │                          │          │
+│                                       │ risk ≥ 4                 │          │
+│                                       ▼                          ▼          │
+│                               ┌───────────────┐          ┌──────────────┐   │
+│                               │ 🎫 Auto-Create │          │  ChromaDB    │   │
+│                               │    Issues     │          │  (Schema)    │   │
+│                               └───────────────┘          └──────────────┘   │
+│                                                                  │          │
+│   💬 CHAT INTERFACE                                              │          │
+│  ┌─────────────────┐          ┌─────────────────┐               │          │
+│  │   User Query    │─────────▶│   🔧 SQL Agent  │◀──────────────┘          │
+│  │                 │          │   17 Tools      │                           │
+│  └─────────────────┘          └────────┬────────┘                           │
+│                                        │                                    │
+│                                        ▼                                    │
+│                               ┌─────────────────┐                           │
+│                               │  📝 Response    │                           │
+│                               └─────────────────┘                           │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                        🖥️ STREAMLIT DASHBOARD                               │
+│         ┌────────────┬────────────┬────────────┬────────────┐               │
+│         │ 🎫 Issues  │ 📧 Emails  │ 📦 Stock   │ 💬 Chat    │               │
+│         └────────────┴────────────┴────────────┴────────────┘               │
+└─────────────────────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## 🔄 Data Flow Diagrams
+## 🔄 Data Flow
 
 ### Email Processing Flow
-
-```mermaid
-flowchart LR
-    A["📧 Email Received"] --> B["🐕 Watchdog"]
-    B --> C{"Risk Score?"}
-    C -->|"≥ 4"| D["🎫 Create Issue"]
-    C -->|"< 4"| E["📝 Log Only"]
-    D --> F["💾 Store in DB"]
-    E --> F
-    F --> G["📊 Dashboard Update"]
+```
+📧 Email Received
+       │
+       ▼
+┌─────────────────┐
+│  🐕 Watchdog    │
+│  - Classify     │
+│  - Score (1-5)  │
+│  - Extract IDs  │
+└────────┬────────┘
+         │
+    ┌────┴────┐
+    ▼         ▼
+Risk ≥ 4   Risk < 4
+    │         │
+    ▼         ▼
+🎫 Create   📝 Log
+  Issue      Only
+    │         │
+    └────┬────┘
+         ▼
+   💾 Store in DB
+         │
+         ▼
+   📊 Dashboard
 ```
 
 ### Chat Flow
-
-```mermaid
-flowchart LR
-    A["👤 User Query"] --> B["💬 chat_with_hugo()"]
-    B --> C["🔧 SQL Agent"]
-    C --> D["🛠️ Select Tools"]
-    D --> E["💾 Query Database"]
-    E --> F["🤖 LLM Response"]
-    F --> G["📝 Formatted Answer"]
+```
+👤 User Query ──▶ 💬 chat_with_hugo() ──▶ 🔧 SQL Agent ──▶ 🛠️ Tools ──▶ 💾 DB ──▶ 📝 Response
 ```
 
 ---
@@ -77,7 +87,7 @@ flowchart LR
 
 ```
 Voltway_Hugo/
-├── streamlit_app.py           # Main dashboard (PRIMARY ENTRY POINT)
+├── streamlit_app.py           # Main dashboard (ENTRY POINT)
 ├── voltway.db                 # SQLite database
 ├── google_credentials.json    # GCP service account
 ├── gmail_api_credentials.json # Gmail OAuth credentials
@@ -85,26 +95,20 @@ Voltway_Hugo/
 ├── src/
 │   ├── agents.py              # LLM agents, chat_with_hugo()
 │   ├── tools.py               # check_fulfillment, safety_stock
-│   ├── stock_tools.py         # Inventory tools (5 tools)
-│   ├── email_tools.py         # Email tools (4 tools)
-│   ├── issue_tools.py         # Issue tracking (6 tools)
-│   ├── gmail_monitor.py       # Gmail OAuth2 + download
-│   ├── rag_schema.py          # Schema embeddings (for scaling)
-│   ├── ingest_specs.py        # OCR-based BOM extraction
-│   ├── schemas.py             # Pydantic models
-│   └── setup_db.py            # Database initialization
+│   ├── stock_tools.py         # 5 inventory tools
+│   ├── email_tools.py         # 4 email tools
+│   ├── issue_tools.py         # 6 issue tracking tools
+│   ├── gmail_monitor.py       # Gmail OAuth2
+│   ├── rag_schema.py          # Schema embeddings
+│   ├── ingest_specs.py        # BOM extraction
+│   └── setup_db.py            # DB initialization
 │
 ├── data/
-│   ├── emails/                # Processed .eml files
-│   ├── specs/                 # Scanned PDF manuals
-│   ├── augment_data.py        # Data alignment script
-│   ├── stock_levels.csv       # Inventory data
-│   ├── material_orders.csv    # Purchase orders
-│   ├── suppliers.csv          # Supplier database
-│   └── sales_orders.csv       # Customer orders
+│   ├── emails/                # .eml files
+│   ├── specs/                 # PDF manuals
+│   └── *.csv                  # Data files
 │
 └── docs/
-    ├── EMAIL_SOP.md           # Email handling procedures
     └── SYSTEM_DOCUMENTATION.md
 ```
 
@@ -114,68 +118,75 @@ Voltway_Hugo/
 
 | Layer | Technology | Purpose |
 |-------|------------|---------|
-| **LLM** | Gemini 2.5 Flash | AI backbone with structured output |
-| **Framework** | LangChain | Agent framework with SQL capabilities |
-| **Database** | SQLite | Primary data storage |
-| **Embeddings** | VertexAI | Schema similarity search |
-| **Vector Store** | ChromaDB | RAG for schema (scaling) |
-| **Frontend** | Streamlit | Web dashboard |
-| **Email** | Gmail API + OAuth2 | Real inbox monitoring |
+| LLM | Gemini 2.5 Flash | AI backbone |
+| Framework | LangChain | SQL agent |
+| Database | SQLite | Primary storage |
+| Embeddings | VertexAI | Schema search |
+| Vector Store | ChromaDB | RAG scaling |
+| Frontend | Streamlit | Dashboard |
+| Email | Gmail API | Inbox monitoring |
 
 ---
 
-## 🛠️ Available Tools (17 Total)
+## 🛠️ Agent Tools (17 Total)
 
-### 📦 Stock Awareness (5 tools)
-| Tool | Description |
-|------|-------------|
-| `get_stock_status(part_id)` | Query stock for a specific part |
-| `get_low_stock_alerts(threshold)` | Find parts below threshold |
-| `get_stock_summary()` | Executive inventory overview |
-| `get_stock_by_model(model)` | BOM-based stock check |
-| `check_part_usage(part_id)` | Which BOMs use a part + demand |
+### 📦 Stock (5 tools)
+| Tool | Purpose |
+|------|---------|
+| `get_stock_status(part_id)` | Stock for specific part |
+| `get_low_stock_alerts(threshold)` | Parts below threshold |
+| `get_stock_summary()` | Inventory overview |
+| `get_stock_by_model(model)` | BOM stock check |
+| `check_part_usage(part_id)` | BOM usage + demand |
 
-### 📧 Email Awareness (4 tools)
-| Tool | Description |
-|------|-------------|
-| `get_email_history(limit)` | Recent processed emails |
-| `search_emails(keyword, intent)` | Search by keyword/intent |
-| `get_email_summary(filename)` | Full email details |
-| `get_emails_by_risk(min_risk)` | Filter high-risk emails |
+### 📧 Email (4 tools)
+| Tool | Purpose |
+|------|---------|
+| `get_email_history(limit)` | Recent emails |
+| `search_emails(keyword, intent)` | Search emails |
+| `get_email_summary(filename)` | Email details |
+| `get_emails_by_risk(min_risk)` | High-risk filter |
 
-### 🎫 Issue Tracking (6 tools)
-| Tool | Description |
-|------|-------------|
-| `get_open_issues()` | All active issues |
-| `get_issue_details(issue_id)` | Full issue info |
-| `resolve_issue(id, notes)` | Close an issue |
-| `create_issue(title, desc, severity)` | Manual creation |
-| `update_issue_status(issue_id, status)` | Change status |
-| `get_issue_summary()` | Dashboard statistics |
+### 🎫 Issues (6 tools)
+| Tool | Purpose |
+|------|---------|
+| `get_open_issues()` | Active issues |
+| `get_issue_details(issue_id)` | Issue info |
+| `resolve_issue(id, notes)` | Close issue |
+| `create_issue(title, desc, severity)` | New issue |
+| `update_issue_status(id, status)` | Update status |
+| `get_issue_summary()` | Statistics |
 
 ### 🔧 Operations (2 tools)
-| Tool | Description |
-|------|-------------|
-| `check_fulfillment(date, model, qty)` | Build feasibility check |
-| `calculate_lean_safety_stock(lead, demand)` | Statistical safety stock |
+| Tool | Purpose |
+|------|---------|
+| `check_fulfillment(date, model, qty)` | Build feasibility |
+| `calculate_lean_safety_stock(lead, demand)` | Safety stock |
 
 ---
 
 ## 🎫 Issue Lifecycle
 
-```mermaid
-stateDiagram-v2
-    [*] --> OPEN: Email Risk ≥ 4
-    OPEN --> IN_PROGRESS: Start Working
-    IN_PROGRESS --> RESOLVED: Fixed
-    RESOLVED --> [*]
-    
-    OPEN --> CLOSED: Duplicate/Invalid
+```
+NEW EMAIL (risk ≥ 4)
+       │
+       ▼
+    ┌──────┐
+    │ OPEN │ ◀─── Awaiting action
+    └──┬───┘
+       ▼
+┌───────────┐
+│IN_PROGRESS│ ◀─── Being addressed
+└─────┬─────┘
+      ▼
+ ┌──────────┐
+ │ RESOLVED │ ◀─── Fixed
+ └──────────┘
 ```
 
 ### Severity Levels
-| Score | Severity | Example Triggers |
-|-------|----------|------------------|
+| Score | Severity | Triggers |
+|-------|----------|----------|
 | 5 | 🔴 CRITICAL | Quality recall, production stop |
 | 4 | 🟠 HIGH | Cancellation, discontinuation |
 | 3 | 🟡 MEDIUM | Delay, partial shipment |
@@ -187,27 +198,24 @@ stateDiagram-v2
 
 | Intent | Auto-Actions |
 |--------|--------------|
-| **DELAY** | Check buffer stock, find alternates |
-| **QUALITY_ALERT** | Set stock to HOLD, create critical issue |
-| **DISCONTINUATION** | Recommend last-time-buy |
-| **PRICE_CHANGE** | Calculate cost impact |
-| **PROPOSAL** | Log for review |
+| DELAY | Check buffer stock, find alternates |
+| QUALITY_ALERT | Set stock to HOLD, create issue |
+| DISCONTINUATION | Recommend last-time-buy |
+| PRICE_CHANGE | Calculate cost impact |
+| PROPOSAL | Log for review |
 
 ---
 
-## 🚀 Quick Start Commands
+## 🚀 Quick Start
 
 ```bash
-# 1. Setup database
+# Setup database
 python -c "from src.setup_db import create_sql_db; create_sql_db()"
 
-# 2. (Optional) Extract BOMs from PDFs
+# (Optional) Extract BOMs
 python -m src.ingest_specs
 
-# 3. (Optional) Build schema index
-python -c "from src.rag_schema import build_schema_index; build_schema_index()"
-
-# 4. Run dashboard
+# Run dashboard
 streamlit run streamlit_app.py
 ```
 
@@ -215,39 +223,25 @@ streamlit run streamlit_app.py
 
 ## ⚙️ Configuration
 
-### Simulated Date (Testing)
 ```python
-# src/tools.py
-SIMULATED_TODAY = datetime.date(2025, 4, 10)  # For testing
-SIMULATED_TODAY = None  # Production (real date)
-```
+# src/tools.py - Simulated date for testing
+SIMULATED_TODAY = datetime.date(2025, 4, 10)  # Testing
+SIMULATED_TODAY = None  # Production
 
-### Rate Limiting
-```python
-# src/agents.py
-MAX_RETRIES = 3      # Retries on 429 error
-RETRY_DELAY = 10     # Seconds between retries
+# src/agents.py - Rate limiting
+MAX_RETRIES = 3
+RETRY_DELAY = 10
 ```
 
 ---
 
-## 🔐 Security
+## 📈 Anti-Hallucination
 
-- OAuth2 for Gmail (no password storage)
-- Token-based authentication
-- Credentials in JSON files (gitignored)
-- No sensitive data in code
-
----
-
-## 📈 Anti-Hallucination Measures
-
-Hugo's prompt includes strict rules:
 ```
 CRITICAL RULES:
-- NEVER make up numbers. Say "I don't have that data."
-- ALWAYS use check_part_usage(part_id) BEFORE claiming demand quantities
-- If a part isn't in any BOM, say so clearly
+- NEVER make up numbers
+- ALWAYS use check_part_usage() before claiming demand
+- If part not in BOM, say so clearly
 ```
 
 ---

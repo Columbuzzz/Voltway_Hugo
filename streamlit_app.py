@@ -92,7 +92,10 @@ def process_single_email(filename):
         content = f"From: {sender}\nSubject: {subject}\n\n{body}"
         
         # Load credentials and call LLM directly
-        with open(PROJECT_ROOT / "google_credentials.json") as f:
+        import os as os_module
+        creds_path = str(PROJECT_ROOT / "google_credentials.json")
+        os_module.environ["GOOGLE_APPLICATION_CREDENTIALS"] = creds_path
+        with open(creds_path) as f:
             project_id = json_module.load(f)["project_id"]
         
         llm = ChatGoogleGenerativeAI(
@@ -101,13 +104,20 @@ def process_single_email(filename):
             temperature=0
         )
         
-        # Simple classification prompt
+        # Simple classification prompt with importance guidelines
         prompt = """Analyze this supplier email and extract:
 - intent: One of [DELAY, QUALITY_ALERT, DISCONTINUATION, PRICE_CHANGE, SHIPMENT_UPDATE, CONTRACT_CHANGE, PROPOSAL, OTHER]
-- risk_score: 1-5 (5 is critical)
+- risk_score: 1-5 based on IMPORTANCE (5 is critical)
 - part_id: If mentioned (e.g., P300)
 - order_id: If mentioned (e.g., O5007)
 - reasoning: Brief explanation
+
+IMPORTANCE GUIDELINES for risk_score:
+  5 - CRITICAL: QUALITY_ALERT (defects, recalls, safety), DISCONTINUATION (part end-of-life)
+  4 - HIGH: DELAY (shipment delays), CANCELLATION (order cancelled)
+  3 - MEDIUM: PARTIAL_SHIPMENT, CONTRACT_CHANGE, SHIPMENT_UPDATE
+  2 - LOW: PRICE_CHANGE (cost adjustments)
+  1 - INFO: PROPOSAL, general inquiries, discounts
 
 Return JSON only: {"intent": "...", "risk_score": N, "part_id": "...", "order_id": "...", "reasoning": "..."}"""
         
@@ -712,10 +722,10 @@ elif page == "📧 Emails":
             # Table with colors
             def color_risk(val):
                 if val >= 4:
-                    return 'background-color: #ffcdd2'
+                    return 'background-color: #ffcdd2; color: black'
                 elif val >= 2:
-                    return 'background-color: #fff9c4'
-                return 'background-color: #c8e6c9'
+                    return 'background-color: #fff9c4; color: black'
+                return 'background-color: #c8e6c9; color: black'
             
             display_df = emails_df[['filename', 'intent', 'risk_score', 'part_id', 'order_id', 'processed_at']]
             st.dataframe(
@@ -763,10 +773,10 @@ elif page == "📦 Stock":
             
             def color_stock(val):
                 if val < 25:
-                    return 'background-color: #ffcdd2'
+                    return 'background-color: #ffcdd2; color: black'
                 elif val < 50:
-                    return 'background-color: #fff9c4'
-                return ''
+                    return 'background-color: #fff9c4; color: black'
+                return 'color: black'
             
             st.dataframe(
                 stock_df.style.applymap(color_stock, subset=['quantity_available']),

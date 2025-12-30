@@ -62,13 +62,14 @@ Voltway_Hugo/
 │   ├── email_tools.py         # Email: search_emails, get_email_history
 │   ├── issue_tools.py         # Issues: create_issue, resolve_issue
 │   ├── gmail_monitor.py       # Gmail OAuth2 + email download
-│   ├── rag.py                 # PDF manual search (query_specs)
 │   ├── rag_schema.py          # Schema embeddings for SQL queries
+│   ├── ingest_specs.py        # OCR-based BOM extraction from PDFs
 │   └── setup_db.py            # Database initialization
 │
 ├── data/
 │   ├── emails/                # Processed .eml files
-│   ├── specs/                 # Technical PDF manuals
+│   ├── specs/                 # Technical PDF manuals (for BOM extraction)
+│   ├── augment_data.py        # Data alignment script for test scenarios
 │   ├── stock_levels.csv       # Inventory data
 │   ├── material_orders.csv    # Purchase orders
 │   ├── suppliers.csv          # Supplier database
@@ -78,6 +79,7 @@ Voltway_Hugo/
     ├── EMAIL_SOP.md           # Email handling procedures
     └── SYSTEM_DOCUMENTATION.md # This file
 ```
+
 
 ---
 
@@ -99,9 +101,38 @@ Local .eml files OR Gmail Inbox
          ▼ (Store results)
 ┌─────────────────────────────────┐
 │  processed_emails table        │
-│  issues table (if risk >= 4)   │
+│  issues table (ALL emails)     │
 └─────────────────────────────────┘
 ```
+
+### 2. PDF/BOM Ingestion Pipeline
+
+```
+data/specs/*.pdf (scanned PDFs)
+         │
+         ▼ (src/ingest_specs.py)
+┌─────────────────────────────────┐
+│  OCR Processing (Tesseract)    │
+│  + LLM Structuring (Gemini)    │
+└─────────────────────────────────┘
+         │
+         ▼
+BOM_S1_V1, BOM_S2_V2... tables
+```
+
+Run: `python -m src.ingest_specs`
+
+### 3. Data Augmentation (Testing)
+
+```bash
+cd data
+python augment_data.py
+```
+
+This script:
+- Aligns part names with email test cases
+- Adds missing orders referenced in emails
+- Updates supplier prices for demo scenarios
 
 ### 2. Chat Flow
 
@@ -118,7 +149,6 @@ chat_with_hugo()
 │    • get_open_issues           │
 │    • check_fulfillment         │
 │    • check_part_usage          │
-│    • query_specs (RAG)         │
 └─────────────────────────────────┘
          │
          ▼
@@ -195,7 +225,6 @@ Formatted Answer with Emojis
 |------|---------|
 | `check_fulfillment(date, model, qty)` | Can we build X by date? |
 | `calculate_lean_safety_stock(lead, demand)` | Statistical safety stock |
-| `query_specs(query)` | RAG search on PDF manuals |
 
 ---
 

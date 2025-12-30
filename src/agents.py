@@ -7,7 +7,6 @@ from langchain_community.agent_toolkits import create_sql_agent
 
 from src.schemas import EmailExtraction
 from src.tools import db, check_fulfillment, calculate_lean_safety_stock
-from src.rag import query_specs
 from src.rag_schema import get_relevant_tables
 from src.stock_tools import (
     get_stock_status, 
@@ -104,7 +103,6 @@ sql_agent = create_sql_agent(
     db=db,
     extra_tools=[
         # Core tools
-        query_specs,
         check_fulfillment,
         calculate_lean_safety_stock,
         check_action_history,
@@ -222,7 +220,7 @@ def chat_with_hugo(user_input: str, conversation_history: list = None):
 📦 Stock: get_stock_status, get_low_stock_alerts, get_stock_summary, check_part_usage
 📧 Email: get_email_history, search_emails, get_emails_by_risk
 🎫 Issues: get_open_issues, get_issue_details, resolve_issue
-🔧 Ops: check_fulfillment, query_specs
+🔧 Ops: check_fulfillment, calculate_lean_safety_stock
 💾 SQL: sales_orders, material_orders, suppliers, stock_levels
 
 CRITICAL RULES:

@@ -1,0 +1,37 @@
+# Credentials (NEVER commit these!)
+google_credentials.json
+gmail_api_credentials.json
+gmail_token.json
+
+# Database
+voltway.db
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+.venv/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Chroma indexes
+chroma_*/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Environment
+.env
+.env.local

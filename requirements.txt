@@ -1,0 +1,20 @@
+langchain
+langchain-google-genai
+langchain-community
+langgraph
+pydantic
+python-dotenv
+pandas
+sqlalchemy
+pypdf
+langchain-chroma
+sentence-transformers  
+langchain-google-vertexai
+# Gmail Integration
+google-auth
+google-auth-oauthlib
+google-api-python-client
+# Web Dashboard
+streamlit
+flask
+flask-cors
